@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin & Analytics – QueueLess</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Top Navigation -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="flex items-center gap-2 text-slate-900 hover:text-blue-600 transition">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-extrabold text-lg tracking-tight">QueueLess</span>
+                </a>
+                <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">Management & Analytics</span>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-4 text-xs font-semibold">
+                <a href="/" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">Customer Portal</a>
+                <a href="/display" target="_blank" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">TV Display</a>
+                <a href="/operator" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">Operator Console</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Admin Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-8">
+
+        <!-- Preset Switcher Strip (University, Clinic, Library, Lab) -->
+        <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <span class="text-[11px] font-extrabold uppercase tracking-widest text-blue-300 block mb-1">Live Environment Preset</span>
+                    <h2 class="text-xl sm:text-2xl font-black">Switch High-Footfall Facility Demo</h2>
+                    <p class="text-xs sm:text-sm text-slate-300 mt-1">Select an organization profile to reconfigure all services, counters, staff and realistic seed tokens with one click.</p>
+                </div>
+
+                <!-- Presets Pill Buttons -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="switchPreset('university')" id="presetBtn-university" class="px-3.5 py-2 rounded-xl text-xs font-bold border border-white/20 bg-white/10 hover:bg-white/20 transition flex items-center gap-2">
+                        <i data-lucide="graduation-cap" class="w-4 h-4 text-amber-300"></i>
+                        <span>University Admin</span>
+                    </button>
+                    <button onclick="switchPreset('clinic')" id="presetBtn-clinic" class="px-3.5 py-2 rounded-xl text-xs font-bold border border-white/20 bg-white/10 hover:bg-white/20 transition flex items-center gap-2">
+                        <i data-lucide="stethoscope" class="w-4 h-4 text-emerald-300"></i>
+                        <span>Hospital Clinic</span>
+                    </button>
+                    <button onclick="switchPreset('library')" id="presetBtn-library" class="px-3.5 py-2 rounded-xl text-xs font-bold border border-white/20 bg-white/10 hover:bg-white/20 transition flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-4 h-4 text-blue-300"></i>
+                        <span>Central Library</span>
+                    </button>
+                    <button onclick="switchPreset('laboratory')" id="presetBtn-laboratory" class="px-3.5 py-2 rounded-xl text-xs font-bold border border-white/20 bg-white/10 hover:bg-white/20 transition flex items-center gap-2">
+                        <i data-lucide="flask-conical" class="w-4 h-4 text-purple-300"></i>
+                        <span>Pathology Lab</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Footfall</span>
+                <span id="kpiTotal" class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">0</span>
+                <span class="text-[10px] text-slate-500 font-medium">issued today</span>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
+                <span id="kpiCompleted" class="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">0</span>
+                <span class="text-[10px] text-emerald-600 font-medium">served successfully</span>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">In Queue</span>
+                <span id="kpiWaiting" class="text-2xl sm:text-3xl font-black text-amber-500 mt-1 block">0</span>
+                <span class="text-[10px] text-slate-500 font-medium">currently waiting</span>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">At Desks</span>
+                <span id="kpiServing" class="text-2xl sm:text-3xl font-black text-blue-600 mt-1 block">0</span>
+                <span class="text-[10px] text-slate-500 font-medium">actively serving</span>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Avg Wait Time</span>
+                <span id="kpiAvgWait" class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">0m</span>
+                <span class="text-[10px] text-blue-600 font-medium">actual wait time</span>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Avg Service Time</span>
+                <span id="kpiAvgService" class="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">0m</span>
+                <span class="text-[10px] text-slate-500 font-medium">per customer</span>
+            </div>
+
+        </div>
+
+        <!-- Charts Grid (Hourly Distribution & Department Breakdown) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Chart 1: Hourly Footfall (8 cols) -->
+            <div class="lg:col-span-8 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Hourly Traffic & Customer Footfall</h3>
+                        <p class="text-xs text-slate-400">Tokens created across operational hours today</p>
+                    </div>
+                    <span class="text-xs font-semibold px-2.5 py-1 bg-blue-50 text-blue-700 rounded-md">Live Today</span>
+                </div>
+                <div class="h-64 sm:h-72">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Service Distribution (4 cols) -->
+            <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base mb-1">Service Demand Share</h3>
+                    <p class="text-xs text-slate-400 mb-4">Volume breakdown by department</p>
+                    <div class="h-56 flex items-center justify-center">
+                        <canvas id="servicePieChart"></canvas>
+                    </div>
+                </div>
+                <div id="serviceBreakdownLegend" class="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Counter & Staff Efficiency Table -->
+        <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base">Service Counters & Operator Performance</h3>
+                    <p class="text-xs text-slate-400">Live throughput and speed metrics per desk</p>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold">
+                            <th class="py-3 px-3">Counter</th>
+                            <th class="py-3 px-3">Department</th>
+                            <th class="py-3 px-3">Active Operator</th>
+                            <th class="py-3 px-3">Status</th>
+                            <th class="py-3 px-3 text-right">Served Today</th>
+                            <th class="py-3 px-3 text-right">Avg Service Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="countersEfficiencyBody" class="divide-y divide-slate-100">
+                        <tr><td colspan="6" class="py-8 text-center text-slate-400">Loading performance metrics...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Configuration Settings: Services & Announcements -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Organization Announcement Editor -->
+            <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100 mb-4">
+                    <div class="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                        <i data-lucide="megaphone" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-900 text-sm">Facility Announcements & Name</h4>
+                        <p class="text-xs text-slate-400">Controls the big screen ticker and top banner</p>
+                    </div>
+                </div>
+
+                <form onsubmit="submitAnnouncementUpdate(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Organization Title</label>
+                        <input type="text" id="adminOrgName" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Marquee Ticker Notice</label>
+                        <textarea id="adminAnnouncement" rows="3" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    </div>
+                    <button type="submit" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition">
+                        Save System Settings
+                    </button>
+                </form>
+            </div>
+
+            <!-- Queue Danger Zone: Reset Queue -->
+            <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 pb-3 border-b border-slate-100 mb-4">
+                        <div class="p-2 bg-rose-100 text-rose-600 rounded-xl">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">Queue Operations & Reset</h4>
+                            <p class="text-xs text-slate-400">Clear queue for a new day or clean testing</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Resetting the queue clears all waiting, serving, and completed tickets for today and sets all desk counters back to idle. Use this at the start of a business day or when demonstrating the system from scratch.
+                    </p>
+                </div>
+
+                <div class="pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <button onclick="confirmResetQueue()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Clear All Queue Tokens
+                    </button>
+                    <button onclick="reloadPresetData()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+                        Reload Realistic Seed
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script src="/static/js/websocket.js"></script>
+
+    <script>
+        let hourlyChartInstance = null;
+        let serviceChartInstance = null;
+        let activePresetKey = 'university';
+
+        async function initAdmin() {
+            await fetchInfo();
+            await refreshAnalytics();
+            await loadCountersTable();
+        }
+
+        async function fetchInfo() {
+            try {
+                const res = await fetch('/api/info');
+                const data = await res.json();
+                document.getElementById('adminOrgName').value = data.organization_name;
+                document.getElementById('adminAnnouncement').value = data.announcement_banner;
+                activePresetKey = data.active_preset || 'university';
+                highlightPresetButton(activePresetKey);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function highlightPresetButton(key) {
+            ['university', 'clinic', 'library', 'laboratory'].forEach(k => {
+                const btn = document.getElementById(`presetBtn-${k}`);
+                if (btn) {
+                    if (k === key) {
+                        btn.className = 'px-3.5 py-2 rounded-xl text-xs font-black border-2 border-white bg-white text-slate-900 shadow-md flex items-center gap-2';
+                    } else {
+                        btn.className = 'px-3.5 py-2 rounded-xl text-xs font-bold border border-white/20 bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-2';
+                    }
+                }
+            });
+        }
+
+        async function switchPreset(presetKey) {
+            try {
+                const res = await fetch('/api/admin/preset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preset: presetKey, seed_data: true })
+                });
+                const data = await res.json();
+                activePresetKey = presetKey;
+                highlightPresetButton(presetKey);
+                await fetchInfo();
+                await refreshAnalytics();
+                await loadCountersTable();
+                alert(`Switched to "${presetKey.toUpperCase()}" preset with fresh sample queue!`);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function reloadPresetData() {
+            await switchPreset(activePresetKey);
+        }
+
+        async function refreshAnalytics() {
+            try {
+                const res = await fetch('/api/analytics');
+                const data = await res.json();
+
+                // KPIs
+                document.getElementById('kpiTotal').textContent = data.summary.total_today;
+                document.getElementById('kpiCompleted').textContent = data.summary.completed_today;
+                document.getElementById('kpiWaiting').textContent = data.summary.currently_waiting;
+                document.getElementById('kpiServing').textContent = data.summary.currently_serving;
+                document.getElementById('kpiAvgWait').textContent = `${data.summary.avg_wait_mins}m`;
+                document.getElementById('kpiAvgService').textContent = `${data.summary.avg_service_mins}m`;
+
+                // Render Hourly Bar Chart
+                renderHourlyChart(data.hourly_distribution);
+
+                // Render Service Doughnut Chart
+                renderServiceChart(data.service_breakdown);
+
+            } catch (e) {
+                console.error("Analytics fetch error:", e);
+            }
+        }
+
+        function renderHourlyChart(hourlyData) {
+            const ctx = document.getElementById('hourlyChart').getContext('2d');
+            const labels = Object.keys(hourlyData);
+            const values = Object.values(hourlyData);
+
+            if (hourlyChartInstance) {
+                hourlyChartInstance.destroy();
+            }
+
+            hourlyChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Customers Arrived',
+                        data: values,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6,
+                        hoverBackgroundColor: '#2563eb'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, font: { size: 10 } },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            ticks: { font: { size: 10 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderServiceChart(services) {
+            const ctx = document.getElementById('servicePieChart').getContext('2d');
+            const legend = document.getElementById('serviceBreakdownLegend');
+
+            const labels = services.map(s => s.name);
+            const data = services.map(s => s.token_count || 1);
+            const colors = services.map(s => s.color || '#3b82f6');
+
+            if (serviceChartInstance) {
+                serviceChartInstance.destroy();
+            }
+
+            serviceChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            legend.innerHTML = services.map(s => `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${s.color}"></span>
+                        <span class="text-slate-700 font-medium">${s.name}</span>
+                    </div>
+                    <span class="font-bold text-slate-900">${s.token_count}</span>
+                </div>
+            `).join('');
+        }
+
+        async function loadCountersTable() {
+            try {
+                const [cRes, aRes] = await Promise.all([
+                    fetch('/api/counters'),
+                    fetch('/api/analytics')
+                ]);
+                const counters = await cRes.json();
+                const analytics = await aRes.json();
+
+                const tbody = document.getElementById('countersEfficiencyBody');
+                const efficiencyMap = {};
+                (analytics.counter_efficiency || []).forEach(e => {
+                    efficiencyMap[e.counter_name] = e;
+                });
+
+                tbody.innerHTML = counters.map(c => {
+                    const eff = efficiencyMap[c.name] || { served_count: 0, avg_time: 0 };
+                    return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-bold text-slate-900">${c.name}</td>
+                        <td class="py-3 px-3 text-slate-600">${c.service_name || 'General'}</td>
+                        <td class="py-3 px-3 font-medium text-slate-800">${c.current_operator || 'Unassigned'}</td>
+                        <td class="py-3 px-3">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
+                                ${c.is_active ? 'Active' : 'Offline'}
+                            </span>
+                        </td>
+                        <td class="py-3 px-3 text-right font-black text-slate-900">${eff.served_count}</td>
+                        <td class="py-3 px-3 text-right font-mono font-bold text-blue-600">${eff.avg_time} mins</td>
+                    </tr>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function submitAnnouncementUpdate(e) {
+            e.preventDefault();
+            const orgName = document.getElementById('adminOrgName').value.trim();
+            const ann = document.getElementById('adminAnnouncement').value.trim();
+
+            try {
+                await fetch('/api/admin/update-announcement', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        organization_name: orgName,
+                        announcement_banner: ann
+                    })
+                });
+                alert("Announcement and Organization settings updated successfully!");
+            } catch (err) {
+                alert("Failed to update settings");
+            }
+        }
+
+        async function confirmResetQueue() {
+            if (!confirm("Are you sure you want to reset all tokens? This will clear today's queue!")) return;
+
+            try {
+                await fetch('/api/admin/reset-queue', { method: 'POST' });
+                await refreshAnalytics();
+                await loadCountersTable();
+                alert("Queue has been reset successfully.");
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        window.addEventListener('queueless:event', (e) => {
+            refreshAnalytics();
+            loadCountersTable();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initAdmin();
+        });
+    </script>
+</body>
+</html>

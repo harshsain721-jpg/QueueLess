@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Queue Board – QueueLess Big Screen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        @keyframes flashBorder {
+            0%, 100% { border-color: rgba(59, 130, 246, 0.4); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+            50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 35px rgba(239, 68, 68, 0.8); }
+        }
+        .called-flash-card {
+            animation: flashBorder 1.2s ease-in-out infinite;
+        }
+        .led-number {
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: -0.05em;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col font-sans select-none overflow-x-hidden">
+
+    <!-- Top Display Header -->
+    <header class="bg-slate-900/90 border-b border-slate-800/80 px-6 py-4 flex items-center justify-between backdrop-blur-md sticky top-0 z-50">
+        
+        <!-- Organization & Title -->
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+                <i data-lucide="layers" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 id="dispOrgName" class="text-xl sm:text-2xl font-black tracking-tight text-white">QueueLess Smart Queue</h1>
+                <p class="text-xs text-blue-400 font-semibold tracking-wider uppercase flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Live Service Hall Monitor
+                </p>
+            </div>
+        </div>
+
+        <!-- Controls: Audio, Fullscreen, Clock -->
+        <div class="flex items-center gap-5">
+            <!-- Audio PA status -->
+            <button id="dispAudioBtn" onclick="toggleAudio()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 flex items-center gap-2 transition">
+                <i id="dispAudioIcon" data-lucide="volume-2" class="w-4 h-4 text-emerald-400"></i>
+                <span id="dispAudioLabel">PA Voice Chime ON</span>
+            </button>
+
+            <!-- Fullscreen toggle -->
+            <button onclick="toggleFullscreen()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition" title="Toggle Fullscreen">
+                <i data-lucide="maximize" class="w-4 h-4"></i>
+            </button>
+
+            <!-- Big Digital Clock -->
+            <div class="text-right pl-3 border-l border-slate-800">
+                <span id="dispClock" class="font-mono text-2xl sm:text-3xl font-black text-white tracking-wider">--:--:--</span>
+                <span id="dispDate" class="block text-[11px] font-medium text-slate-400 uppercase tracking-widest">---, -- ---</span>
+            </div>
+        </div>
+
+    </header>
+
+    <!-- Main Display Grid -->
+    <main class="flex-1 p-6 sm:p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        <!-- Left: Active Counters Board (8 cols) -->
+        <div class="lg:col-span-8 space-y-6">
+            
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="radio" class="w-5 h-5 text-red-500 animate-pulse"></i>
+                    <h2 class="text-lg font-extrabold uppercase tracking-wider text-slate-300">Currently Serving Counters</h2>
+                </div>
+                <span id="activeCounterCount" class="text-xs font-bold px-3 py-1 bg-slate-800 rounded-full border border-slate-700 text-slate-400">
+                    0 Desks Active
+                </span>
+            </div>
+
+            <!-- Counters Grid -->
+            <div id="countersDisplayGrid" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="p-12 text-center text-slate-500 col-span-full">Loading counter boards...</div>
+            </div>
+
+        </div>
+
+        <!-- Right: Up Next & Recent Completions (4 cols) -->
+        <div class="lg:col-span-4 space-y-6">
+
+            <!-- Up Next In Line -->
+            <div class="bg-slate-900/80 rounded-3xl border border-slate-800 p-6 flex flex-col h-[340px]">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+                        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300">Up Next In Queue</h3>
+                    </div>
+                    <span id="dispWaitingCount" class="text-xs font-mono font-bold text-amber-400">0 waiting</span>
+                </div>
+
+                <div id="upNextList" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                    <div class="text-center py-8 text-slate-500 text-xs">Queue is clear</div>
+                </div>
+            </div>
+
+            <!-- Recently Completed -->
+            <div class="bg-slate-900/80 rounded-3xl border border-slate-800 p-6 flex flex-col h-[280px]">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+                        <h3 class="font-bold text-sm uppercase tracking-wider text-slate-300">Recently Served</h3>
+                    </div>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">History</span>
+                </div>
+
+                <div id="recentlyServedList" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                    <div class="text-center py-8 text-slate-500 text-xs">No completed tokens yet today</div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Bottom Marquee Ticker -->
+    <div class="bg-blue-950 border-t border-blue-900/60 py-3 px-4 text-blue-200 text-sm overflow-hidden flex items-center">
+        <span class="bg-blue-600 text-white font-extrabold text-[11px] px-3 py-1 rounded-md uppercase tracking-wider shrink-0 mr-4 shadow-sm">
+            Announcement
+        </span>
+        <div class="marquee-container flex-1">
+            <div id="dispMarquee" class="marquee-content font-medium">
+                Welcome to QueueLess. Please keep your required identification and documentation ready when called to the counter.
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/chime.js"></script>
+    <script src="/static/js/websocket.js"></script>
+
+    <script>
+        let lastCalledToken = null;
+
+        // Clock & Date
+        function updateDisplayTime() {
+            const now = new Date();
+            document.getElementById('dispClock').textContent = now.toLocaleTimeString();
+            document.getElementById('dispDate').textContent = now.toLocaleDateString(undefined, {
+                weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+            });
+        }
+        setInterval(updateDisplayTime, 1000);
+        updateDisplayTime();
+
+        // Audio Toggle
+        function toggleAudio() {
+            const current = window.queueAudio.soundEnabled;
+            window.queueAudio.soundEnabled = !current;
+            window.queueAudio.speechEnabled = !current;
+
+            const icon = document.getElementById('dispAudioIcon');
+            const label = document.getElementById('dispAudioLabel');
+            if (!current) {
+                icon.className = 'w-4 h-4 text-emerald-400';
+                label.textContent = 'PA Voice Chime ON';
+                window.queueAudio.playChime();
+            } else {
+                icon.className = 'w-4 h-4 text-slate-500';
+                label.textContent = 'PA Voice Chime OFF';
+            }
+        }
+
+        // Fullscreen Toggle
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(e => console.warn(e));
+            } else {
+                document.exitFullscreen().catch(e => console.warn(e));
+            }
+        }
+
+        // Fetch Big-Screen Feed
+        async function fetchDisplayFeed() {
+            try {
+                const res = await fetch('/api/display-feed');
+                const data = await res.json();
+
+                document.getElementById('dispOrgName').textContent = data.organization_name;
+                document.getElementById('dispMarquee').textContent = data.announcement || 'Please observe silence and wait for your token to be announced.';
+
+                renderCounters(data.counters);
+                renderUpNext(data.up_next);
+                renderRecentlyServed(data.recently_served);
+
+            } catch (e) {
+                console.error("Display feed error:", e);
+            }
+        }
+
+        function renderCounters(counters) {
+            const grid = document.getElementById('countersDisplayGrid');
+            document.getElementById('activeCounterCount').textContent = `${counters.length} Desks Active`;
+
+            if (!counters || counters.length === 0) {
+                grid.innerHTML = '<div class="col-span-full p-12 text-center text-slate-500 text-sm">No active service counters online.</div>';
+                return;
+            }
+
+            grid.innerHTML = counters.map(c => {
+                const hasToken = !!c.token_number;
+                const isCalled = c.token_status === 'CALLED';
+                const cardClass = isCalled ? 'called-flash-card border-red-500 bg-red-950/20' : 'border-slate-800 bg-slate-900/90 hover:border-slate-700';
+
+                return `
+                <div class="rounded-3xl border-2 ${cardClass} p-6 shadow-xl relative overflow-hidden flex flex-col justify-between transition">
+                    
+                    <!-- Header: Counter Name & Service Tag -->
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div>
+                            <span class="text-xs uppercase tracking-wider font-extrabold text-blue-400 block">${c.service_name || 'Counter'}</span>
+                            <h3 class="text-xl font-black text-white">${c.counter_name}</h3>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isCalled ? 'bg-red-500 text-white animate-pulse' : (hasToken ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-800 text-slate-400')}">
+                            ${isCalled ? 'NOW CALLING' : (hasToken ? 'SERVING' : 'IDLE')}
+                        </span>
+                    </div>
+
+                    <!-- Huge LED Token Number -->
+                    <div class="my-4 text-center py-4 bg-slate-950/80 rounded-2xl border border-slate-800/80">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Token Ticket</span>
+                        <div class="led-number text-5xl sm:text-6xl font-black ${hasToken ? 'text-amber-400' : 'text-slate-700'}">
+                            ${c.token_number || '---'}
+                        </div>
+                    </div>
+
+                    <!-- Passenger / Operator Footer -->
+                    <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                        <span class="truncate max-w-[180px]">
+                            ${hasToken ? `<b class="text-slate-200">${c.customer_name}</b>` : '<span class="italic text-slate-600">Waiting for next</span>'}
+                        </span>
+                        <span class="text-slate-500 text-[11px] font-medium">
+                            Staff: ${c.current_operator || 'Desk Staff'}
+                        </span>
+                    </div>
+
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderUpNext(tokens) {
+            const list = document.getElementById('upNextList');
+            document.getElementById('dispWaitingCount').textContent = `${tokens.length} waiting`;
+
+            if (!tokens || tokens.length === 0) {
+                list.innerHTML = '<div class="text-center py-10 text-slate-600 text-xs">Queue is clear!</div>';
+                return;
+            }
+
+            list.innerHTML = tokens.map((t, i) => `
+                <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-md bg-slate-800 text-slate-400 font-mono text-xs font-bold flex items-center justify-center">
+                            ${i + 1}
+                        </span>
+                        <div>
+                            <span class="font-mono font-bold text-white text-sm">${t.token_number}</span>
+                            <span class="text-[11px] text-slate-400 block">${t.customer_name}</span>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                        ${t.service_code}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function renderRecentlyServed(tokens) {
+            const list = document.getElementById('recentlyServedList');
+            if (!tokens || tokens.length === 0) {
+                list.innerHTML = '<div class="text-center py-10 text-slate-600 text-xs">No completed tickets yet.</div>';
+                return;
+            }
+
+            list.innerHTML = tokens.map(t => `
+                <div class="p-2.5 rounded-xl bg-slate-950/50 border border-slate-800/50 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span class="font-mono font-bold text-slate-200">${t.token_number}</span>
+                    </div>
+                    <span class="text-slate-400 text-[11px]">${t.counter_name}</span>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // Live WebSocket listener
+        window.addEventListener('queueless:event', (e) => {
+            const ev = e.detail;
+
+            if (ev.type === 'TOKEN_CALLED' || ev.type === 'TOKEN_RECALLED') {
+                const d = ev.data;
+                // Play PA Chime & Speech
+                window.queueAudio.announce(d.token_number, d.counter_name);
+            }
+
+            fetchDisplayFeed();
+        });
+
+        // Periodic safety refresh every 15s in case of connection interruptions
+        setInterval(fetchDisplayFeed, 15000);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            fetchDisplayFeed();
+        });
+    </script>
+</body>
+</html>

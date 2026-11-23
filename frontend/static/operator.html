@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Desk – QueueLess Smart Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Top Bar -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 px-4 sm:px-6 py-3 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            
+            <div class="flex items-center gap-3">
+                <a href="/" class="flex items-center gap-2 text-white hover:text-blue-400 transition">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-extrabold text-base tracking-tight">QueueLess</span>
+                </a>
+                <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-400/30 font-semibold uppercase tracking-wider">Staff Console</span>
+            </div>
+
+            <!-- Portal Links -->
+            <div class="hidden sm:flex items-center gap-3 text-xs">
+                <a href="/" class="text-slate-400 hover:text-white transition">Customer Portal</a>
+                <span class="text-slate-700">•</span>
+                <a href="/display" target="_blank" class="text-slate-400 hover:text-white transition">Big Screen TV</a>
+                <span class="text-slate-700">•</span>
+                <a href="/admin" class="text-slate-400 hover:text-white transition">Admin & Config</a>
+            </div>
+
+            <!-- Operator Status Pill -->
+            <div class="flex items-center gap-3 text-xs">
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
+                    <span id="opWsDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="opWsText">Live Sync</span>
+                </div>
+                <button onclick="window.queueAudio.playChime()" title="Test PA Chime" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                    <i data-lucide="volume-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Main Operator Workspace -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+        <!-- Desk / Counter Selector & Active Staff Header -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+            
+            <div class="flex flex-wrap items-center gap-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Active Counter</label>
+                    <select id="counterSelect" onchange="onCounterChange()" class="font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Logged In Operator</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="operatorNameInput" placeholder="Staff Name" class="text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <button onclick="saveOperatorName()" class="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-xs font-bold transition">Update</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Counter Status & Walk-in shortcut -->
+            <div class="flex items-center gap-3">
+                <button id="toggleCounterStatusBtn" onclick="toggleCounterStatus()" class="px-4 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-2 bg-emerald-50 text-emerald-700 border-emerald-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span id="counterStatusLabel">Counter ACTIVE</span>
+                </button>
+                <button onclick="openWalkinModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Add Walk-in
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Central Operator Desk Console Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Left / Center: Big Active Token Control Panel (8 cols) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Main Active Customer Panel -->
+                <div id="activeTicketPanel" class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+                    <!-- Populated dynamically via JS -->
+                    <div class="text-center py-12 text-slate-400">Loading counter status...</div>
+                </div>
+
+                <!-- Department Queue Summary Strip -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Waiting in Department</span>
+                        <span id="deptWaitingCount" class="text-2xl font-black text-slate-900">0</span>
+                    </div>
+                    <div class="border-x border-slate-100">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Est. Wait for Next</span>
+                        <span id="deptEstWait" class="text-2xl font-black text-blue-600">0m</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Served Today (This Desk)</span>
+                        <span id="deskServedToday" class="text-2xl font-black text-emerald-600">0</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right: Live Waiting Queue List for this service (5 cols) -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col h-[580px]">
+                    
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-base">Waiting Queue</h3>
+                            <p id="queueSubtitle" class="text-xs text-slate-500">Service: All</p>
+                        </div>
+                        <span id="waitingBadge" class="px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full font-bold text-xs">
+                            0 in line
+                        </span>
+                    </div>
+
+                    <!-- Scrollable list of waiting tokens -->
+                    <div id="waitingListContainer" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                        <div class="p-8 text-center text-slate-400 text-xs">Loading queue...</div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal: Walk-in Token Dispenser -->
+    <div id="walkinModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-md w-full shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                        <i data-lucide="user-plus" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-900">Issue Walk-in Ticket</h3>
+                </div>
+                <button onclick="closeWalkinModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form onsubmit="submitWalkinToken(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Customer Full Name *</label>
+                    <input type="text" id="walkinName" required placeholder="Visitor name" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Phone (Optional)</label>
+                    <input type="tel" id="walkinPhone" placeholder="For SMS turn alerts" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Purpose / Notes</label>
+                    <input type="text" id="walkinNotes" placeholder="Reason for in-person visit" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <label class="flex items-center gap-2 text-xs font-bold text-amber-900 cursor-pointer">
+                        <input type="checkbox" id="walkinPriority" class="rounded text-amber-600 focus:ring-amber-500">
+                        <span>Priority Queue (Elderly / Medical / Urgent)</span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeWalkinModal()" class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition">Issue Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Transfer Token to Another Service -->
+    <div id="transferModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 max-w-md w-full shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                        <i data-lucide="arrow-right-left" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-900">Transfer Customer</h3>
+                </div>
+                <button onclick="closeTransferModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form onsubmit="submitTransferToken(event)" class="space-y-4">
+                <input type="hidden" id="transferTokenId">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Transfer to Department *</label>
+                    <select id="transferTargetService" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Reason for Transfer</label>
+                    <input type="text" id="transferReason" placeholder="e.g. Needs fee receipt clearance first" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeTransferModal()" class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition">Confirm Transfer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/chime.js"></script>
+    <script src="/static/js/websocket.js"></script>
+
+    <script>
+        let allCounters = [];
+        let allServices = [];
+        let currentCounterId = null;
+        let activeToken = null;
+        let serviceTimerInterval = null;
+        let serviceStartTimestamp = null;
+
+        async function initOperator() {
+            await fetchCountersAndServices();
+            loadActiveCounterData();
+            startTimerTicker();
+        }
+
+        async function fetchCountersAndServices() {
+            try {
+                const [cRes, sRes] = await Promise.all([
+                    fetch('/api/counters'),
+                    fetch('/api/services')
+                ]);
+                allCounters = await cRes.json();
+                allServices = await sRes.json();
+
+                renderCounterSelect();
+                renderTransferSelect();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderCounterSelect() {
+            const select = document.getElementById('counterSelect');
+            const savedCounter = localStorage.getItem('queueless_op_counter');
+
+            select.innerHTML = allCounters.map(c => `
+                <option value="${c.id}" ${c.id === (savedCounter || allCounters[0]?.id) ? 'selected' : ''}>
+                    ${c.name} (${c.service_name || 'General'})
+                </option>
+            `).join('');
+
+            currentCounterId = select.value;
+            syncCurrentCounterUI();
+        }
+
+        function renderTransferSelect() {
+            const select = document.getElementById('transferTargetService');
+            select.innerHTML = allServices.map(s => `
+                <option value="${s.id}">${s.name} (${s.code})</option>
+            `).join('');
+        }
+
+        function onCounterChange() {
+            currentCounterId = document.getElementById('counterSelect').value;
+            localStorage.setItem('queueless_op_counter', currentCounterId);
+            syncCurrentCounterUI();
+            loadActiveCounterData();
+        }
+
+        function syncCurrentCounterUI() {
+            const c = allCounters.find(x => x.id === currentCounterId);
+            if (!c) return;
+
+            document.getElementById('operatorNameInput').value = c.current_operator || '';
+            const statusBtn = document.getElementById('toggleCounterStatusBtn');
+            const statusLabel = document.getElementById('counterStatusLabel');
+
+            if (c.is_active) {
+                statusBtn.className = 'px-4 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-2 bg-emerald-50 text-emerald-700 border-emerald-300';
+                statusLabel.textContent = 'Counter ACTIVE';
+            } else {
+                statusBtn.className = 'px-4 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-2 bg-slate-200 text-slate-600 border-slate-300';
+                statusLabel.textContent = 'Counter OFFLINE';
+            }
+
+            document.getElementById('queueSubtitle').textContent = `Service: ${c.service_name || 'General'}`;
+        }
+
+        async function toggleCounterStatus() {
+            const c = allCounters.find(x => x.id === currentCounterId);
+            if (!c) return;
+
+            const newStatus = c.is_active ? 0 : 1;
+            try {
+                await fetch('/api/operator/counter-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        counter_id: currentCounterId,
+                        is_active: newStatus
+                    })
+                });
+                c.is_active = newStatus;
+                syncCurrentCounterUI();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function saveOperatorName() {
+            const name = document.getElementById('operatorNameInput').value.trim();
+            const c = allCounters.find(x => x.id === currentCounterId);
+            if (!c) return;
+
+            try {
+                await fetch('/api/operator/counter-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        counter_id: currentCounterId,
+                        is_active: c.is_active,
+                        operator_name: name
+                    })
+                });
+                c.current_operator = name;
+                alert("Operator updated successfully!");
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadActiveCounterData() {
+            if (!currentCounterId) return;
+
+            try {
+                const [cRes, qRes] = await Promise.all([
+                    fetch('/api/counters'),
+                    fetch('/api/queue/active')
+                ]);
+                allCounters = await cRes.json();
+                const allActiveQueue = await qRes.json();
+
+                const c = allCounters.find(x => x.id === currentCounterId);
+                if (!c) return;
+
+                // Waiting queue for this service
+                const waitingTokens = allActiveQueue.filter(t => t.service_id === c.service_id && t.status === 'WAITING');
+                renderWaitingList(waitingTokens);
+
+                // Department metrics
+                document.getElementById('deptWaitingCount').textContent = waitingTokens.length;
+                document.getElementById('waitingBadge').textContent = `${waitingTokens.length} in line`;
+
+                // If counter has a current token
+                if (c.current_token_id && c.current_token_number) {
+                    activeToken = {
+                        id: c.current_token_id,
+                        token_number: c.current_token_number,
+                        customer_name: c.current_customer_name,
+                        status: c.current_token_status,
+                        started_at: c.current_token_started_at,
+                        called_at: c.current_token_called_at,
+                        is_priority: c.current_is_priority
+                    };
+                    renderActiveTicketView();
+                } else {
+                    activeToken = null;
+                    renderIdleView(waitingTokens.length);
+                }
+
+                // Update desk served today
+                fetchDeskServedCount();
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchDeskServedCount() {
+            try {
+                const res = await fetch('/api/analytics');
+                const data = await res.json();
+                const desk = data.counter_efficiency.find(x => x.counter_name === allCounters.find(c => c.id === currentCounterId)?.name);
+                document.getElementById('deskServedToday').textContent = desk ? desk.served_count : '0';
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderIdleView(waitingCount) {
+            const panel = document.getElementById('activeTicketPanel');
+            panel.innerHTML = `
+                <div class="text-center py-10 px-4">
+                    <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4 border border-blue-100">
+                        <i data-lucide="bell" class="w-8 h-8"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Counter Ready</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900 mb-2">No Active Customer at Desk</h2>
+                    <p class="text-sm text-slate-500 max-w-md mx-auto mb-8">
+                        There are currently <b class="text-blue-600">${waitingCount}</b> customer${waitingCount === 1 ? '' : 's'} waiting in queue for this department.
+                    </p>
+
+                    <button onclick="operatorCallNext()" ${waitingCount === 0 ? 'disabled' : ''} class="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-blue-500/25 flex items-center justify-center gap-3 mx-auto transition transform hover:-translate-y-0.5">
+                        <i data-lucide="phone-call" class="w-6 h-6"></i>
+                        <span>Call Next Customer (Spacebar)</span>
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+            stopTimerTicker();
+        }
+
+        function renderActiveTicketView() {
+            if (!activeToken) return;
+            const panel = document.getElementById('activeTicketPanel');
+            const isServing = activeToken.status === 'SERVING';
+
+            panel.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Ticket Header -->
+                    <div class="flex items-start justify-between gap-4 pb-4 border-b border-slate-100">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Currently At Counter</span>
+                            <h3 class="text-xl font-extrabold text-slate-900">${activeToken.customer_name}</h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-3 py-1 rounded-full text-xs font-black ${isServing ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700 animate-pulse border border-red-300'}">
+                                ${activeToken.status}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Big Token Number & Stopwatch -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-slate-50 rounded-2xl p-6 border border-slate-200/80">
+                        <div>
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-0.5">Token Ticket</span>
+                            <div class="font-mono text-5xl font-black text-slate-900 tracking-tight">
+                                ${activeToken.token_number}
+                            </div>
+                            ${activeToken.is_priority ? '<span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">★ Priority Customer</span>' : ''}
+                        </div>
+                        <div class="sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-4">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-0.5">Service Elapsed Time</span>
+                            <div id="serviceStopwatch" class="font-mono text-3xl font-extrabold text-blue-600">
+                                00:00
+                            </div>
+                            <span class="text-[11px] text-slate-400 block mt-0.5">Target: ~10 mins</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Action Buttons -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                        <!-- Recall (Re-chime) -->
+                        <button onclick="operatorRecall()" class="px-3 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition shadow-sm">
+                            <i data-lucide="megaphone" class="w-4 h-4"></i>
+                            <span>Recall (Chime)</span>
+                        </button>
+
+                        <!-- Start Serving (if called) -->
+                        <button onclick="operatorStartServing()" ${isServing ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-3 rounded-xl bg-blue-600 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5"' : 'class="px-3 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition shadow-sm"'}>
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            <span>Start Serving</span>
+                        </button>
+
+                        <!-- Complete -->
+                        <button onclick="operatorComplete()" class="px-3 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition shadow-sm">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            <span>Complete</span>
+                        </button>
+
+                        <!-- Skip / No-show -->
+                        <button onclick="operatorSkip()" class="px-3 py-3 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition shadow-sm">
+                            <i data-lucide="user-x" class="w-4 h-4"></i>
+                            <span>No-Show / Skip</span>
+                        </button>
+                    </div>
+
+                    <!-- Transfer Shortcut -->
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span>Need to send customer to another counter?</span>
+                        <button onclick="openTransferModal(${activeToken.id})" class="px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 font-semibold text-slate-700 flex items-center gap-1">
+                            <i data-lucide="arrow-right-left" class="w-3.5 h-3.5 text-indigo-600"></i> Transfer Customer
+                        </button>
+                    </div>
+
+                </div>
+            `;
+            lucide.createIcons();
+
+            // Set stopwatch start
+            const timeStr = activeToken.started_at || activeToken.called_at;
+            if (timeStr) {
+                serviceStartTimestamp = new Date(timeStr.replace(' ', 'T')).getTime();
+            } else {
+                serviceStartTimestamp = Date.now();
+            }
+        }
+
+        function renderWaitingList(tokens) {
+            const container = document.getElementById('waitingListContainer');
+            if (!tokens || tokens.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400">
+                        <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                        <p class="font-medium text-xs">Queue is clear! No customers waiting.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = tokens.map((t, idx) => `
+                <div class="p-3.5 rounded-2xl border ${t.is_priority ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-white'} hover:shadow-xs transition flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center">
+                            ${idx + 1}
+                        </span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-slate-900 text-sm">${t.token_number}</span>
+                                ${t.is_priority ? '<span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-200 text-amber-800">PRIORITY</span>' : ''}
+                            </div>
+                            <span class="text-xs text-slate-500 font-medium block">${t.customer_name}</span>
+                        </div>
+                    </div>
+
+                    <div class="text-right">
+                        <span class="text-[10px] text-slate-400 block font-mono">${t.created_at.split(' ')[1]}</span>
+                        <span class="text-[11px] text-blue-600 font-bold">~${t.estimated_wait_mins}m</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Operator API Actions
+        async function operatorCallNext() {
+            try {
+                const res = await fetch('/api/operator/call-next', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        counter_id: currentCounterId,
+                        operator_name: document.getElementById('operatorNameInput').value.trim()
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'EMPTY') {
+                    alert("Queue is empty. No waiting customers!");
+                } else {
+                    // Trigger sound announcement
+                    window.queueAudio.announce(data.token_number, data.counter_name);
+                    loadActiveCounterData();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function operatorRecall() {
+            try {
+                const res = await fetch('/api/operator/recall', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ counter_id: currentCounterId })
+                });
+                const data = await res.json();
+                window.queueAudio.announce(data.token_number, data.counter_name);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function operatorStartServing() {
+            try {
+                await fetch('/api/operator/start-serving', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ counter_id: currentCounterId })
+                });
+                loadActiveCounterData();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function operatorComplete() {
+            try {
+                await fetch('/api/operator/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ counter_id: currentCounterId })
+                });
+                loadActiveCounterData();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function operatorSkip() {
+            const reason = prompt("Enter reason for skipping token (e.g. No Show, Incomplete documents):", "No Show");
+            if (!reason) return;
+
+            try {
+                await fetch('/api/operator/skip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        counter_id: currentCounterId,
+                        reason: reason
+                    })
+                });
+                loadActiveCounterData();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Walk-in modal
+        function openWalkinModal() {
+            document.getElementById('walkinModal').classList.remove('hidden');
+        }
+        function closeWalkinModal() {
+            document.getElementById('walkinModal').classList.add('hidden');
+        }
+
+        async function submitWalkinToken(e) {
+            e.preventDefault();
+            const c = allCounters.find(x => x.id === currentCounterId);
+            if (!c) return;
+
+            const payload = {
+                service_id: c.service_id,
+                customer_name: document.getElementById('walkinName').value.trim(),
+                customer_phone: document.getElementById('walkinPhone').value.trim(),
+                notes: document.getElementById('walkinNotes').value.trim(),
+                is_priority: document.getElementById('walkinPriority').checked ? 1 : 0,
+                token_type: "WALK_IN"
+            };
+
+            try {
+                const res = await fetch('/api/tokens/take', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const tok = await res.json();
+                closeWalkinModal();
+                alert(`Walk-in Token Issued: ${tok.token_number} (${tok.customer_name})`);
+                loadActiveCounterData();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // Transfer modal
+        function openTransferModal(tokenId) {
+            document.getElementById('transferTokenId').value = tokenId;
+            document.getElementById('transferModal').classList.remove('hidden');
+        }
+        function closeTransferModal() {
+            document.getElementById('transferModal').classList.add('hidden');
+        }
+
+        async function submitTransferToken(e) {
+            e.preventDefault();
+            const tokenId = document.getElementById('transferTokenId').value;
+            const targetSrv = document.getElementById('transferTargetService').value;
+            const reason = document.getElementById('transferReason').value.trim();
+
+            try {
+                await fetch('/api/operator/transfer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token_id: parseInt(tokenId),
+                        target_service_id: targetSrv,
+                        reason: reason
+                    })
+                });
+                closeTransferModal();
+                loadActiveCounterData();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        // Stopwatch Ticker
+        function startTimerTicker() {
+            if (serviceTimerInterval) clearInterval(serviceTimerInterval);
+            serviceTimerInterval = setInterval(() => {
+                const el = document.getElementById('serviceStopwatch');
+                if (el && serviceStartTimestamp) {
+                    const diffSec = Math.floor((Date.now() - serviceStartTimestamp) / 1000);
+                    if (diffSec >= 0) {
+                        const m = String(Math.floor(diffSec / 60)).padStart(2, '0');
+                        const s = String(diffSec % 60).padStart(2, '0');
+                        el.textContent = `${m}:${s}`;
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopTimerTicker() {
+            serviceStartTimestamp = null;
+        }
+
+        // Keyboard Shortcut: Spacebar to Call Next when modal not open
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !activeToken && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                operatorCallNext();
+            }
+        });
+
+        // Live WebSocket updates
+        window.addEventListener('queueless:event', (e) => {
+            loadActiveCounterData();
+        });
+
+        document.addEventListener('DOMContentLoaded', initOperator);
+    </script>
+</body>
+</html>
